@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
-import 'package:shared_preferences/shared_preferences.dart';
+import 'package:provider/provider.dart';
+import '../../providers/auth_provider.dart';
 import '../../theme/app_theme.dart';
+import 'package:firebase_auth/firebase_auth.dart' as firebase_auth;
+import 'package:google_sign_in/google_sign_in.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -29,32 +32,34 @@ class _LoginScreenState extends State<LoginScreen> {
     if (!_formKey.currentState!.validate()) return;
 
     setState(() => _isLoading = true);
-    final prefs = await SharedPreferences.getInstance();
+    final authProvider = Provider.of<AppAuthProvider>(context, listen: false);
     
-    final savedEmail = prefs.getString('user_email');
-    final savedPassword = prefs.getString('user_password');
-    final savedName = prefs.getString('user_name');
-
-    // First check if we have saved credentials
-    if (savedEmail == null || savedPassword == null) {
-      setState(() => _isLoading = false);
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('No account found. Please sign up first.'),
-            backgroundColor: Colors.red,
-          ),
-        );
+    try {
+      // First check if user exists and validate credentials
+      final isValid = await authProvider.validateLogin(
+        _emailController.text.trim(),
+        _passwordController.text,
+      );
+      
+      if (!isValid) {
+        setState(() => _isLoading = false);
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Invalid email or password'),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
+        return;
       }
-      return;
-    }
-
-    // Then check if credentials match
-    if (savedEmail == _emailController.text.trim() &&
-        savedPassword == _passwordController.text) {
-      // Update profile information with non-null values
-      await prefs.setString('profile_name', savedName ?? 'User');
-      await prefs.setString('profile_email', savedEmail);
+      
+      // If valid, perform login
+      await authProvider.login(
+        _emailController.text.trim(),
+        _passwordController.text,
+        'User', // Default name, will be updated from stored data
+      );
       
       setState(() => _isLoading = false);
       if (mounted) {
@@ -63,14 +68,39 @@ class _LoginScreenState extends State<LoginScreen> {
           const SnackBar(content: Text('Login successful!')),
         );
       }
-    } else {
+    } catch (e) {
       setState(() => _isLoading = false);
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-            content: Text('Invalid email or password'),
+            content: Text('Login failed. Please try again.'),
             backgroundColor: Colors.red,
           ),
+        );
+      }
+    }
+  }
+
+  Future<void> _signInWithGoogle() async {
+    try {
+      final GoogleSignInAccount? googleUser = await GoogleSignIn().signIn();
+      if (googleUser == null) return; // User cancelled
+      final GoogleSignInAuthentication googleAuth = await googleUser.authentication;
+      final credential = firebase_auth.GoogleAuthProvider.credential(
+        accessToken: googleAuth.accessToken,
+        idToken: googleAuth.idToken,
+      );
+      await firebase_auth.FirebaseAuth.instance.signInWithCredential(credential);
+      if (mounted) {
+        context.go('/dashboard');
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Google Sign-In successful!')),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Google Sign-In failed: $e'), backgroundColor: Colors.red),
         );
       }
     }
@@ -129,7 +159,7 @@ class _LoginScreenState extends State<LoginScreen> {
                       Text(
                         'Sign in to your account',
                         style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                          color: Theme.of(context).colorScheme.onBackground.withOpacity(0.7),
+                          color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
                         ),
                       ),
                     ],
@@ -195,25 +225,24 @@ class _LoginScreenState extends State<LoginScreen> {
                   },
                 ),
                 
-                const SizedBox(height: 16),
-                
-                // Forgot Password
+                // Forgot Password Button
                 Align(
                   alignment: Alignment.centerRight,
                   child: TextButton(
                     onPressed: () {
-                      // TODO: Navigate to forgot password screen
+                      context.push('/forget-password');
                     },
                     child: Text(
                       'Forgot Password?',
                       style: TextStyle(
                         color: Theme.of(context).colorScheme.primary,
+                        fontWeight: FontWeight.w600,
                       ),
                     ),
                   ),
                 ),
                 
-                const SizedBox(height: 32),
+                const SizedBox(height: 16),
                 
                 // Login Button
                 SizedBox(
@@ -263,9 +292,7 @@ class _LoginScreenState extends State<LoginScreen> {
                   children: [
                     Expanded(
                       child: OutlinedButton.icon(
-                        onPressed: () {
-                          // TODO: Implement Google login
-                        },
+                        onPressed: _signInWithGoogle,
                         icon: const Icon(Icons.g_mobiledata, size: 24),
                         label: const Text('Google'),
                         style: OutlinedButton.styleFrom(
@@ -301,7 +328,7 @@ class _LoginScreenState extends State<LoginScreen> {
                       Text(
                         "Don't have an account? ",
                         style: TextStyle(
-                          color: Theme.of(context).colorScheme.onBackground.withOpacity(0.7),
+                          color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
                         ),
                       ),
                       TextButton(

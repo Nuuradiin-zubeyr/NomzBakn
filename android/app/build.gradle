@@ -6,17 +6,17 @@ plugins {
 }
 
 android {
-    namespace = "com.example.nomzbank"
+    namespace 'com.example.nomzbank'
     compileSdkVersion 35
     ndkVersion = flutter.ndkVersion
 
     compileOptions {
-        sourceCompatibility = JavaVersion.VERSION_11
-        targetCompatibility = JavaVersion.VERSION_11
+        sourceCompatibility = JavaVersion.VERSION_1_8
+        targetCompatibility = JavaVersion.VERSION_1_8
     }
 
     kotlinOptions {
-        jvmTarget = '11'
+        jvmTarget = '1.8'
     }
 
     defaultConfig {
@@ -49,3 +49,5 @@ configurations.all {
         force 'androidx.work:work-runtime-ktx:2.9.0'
     }
 }
+
+apply plugin: 'com.google.gms.google-services'

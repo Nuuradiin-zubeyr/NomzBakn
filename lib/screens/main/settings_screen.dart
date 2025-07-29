@@ -157,7 +157,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: Text('Close'),
+            child: const Text('Close'),
           ),
         ],
       ),
@@ -195,7 +195,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
               value: themeProvider.isDarkMode,
               onChanged: (val) {
                 themeProvider.toggleTheme();
-                _saveSettings(); // Save settings after theme change
               },
             ),
           ),

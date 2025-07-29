@@ -47,12 +47,10 @@ class AppTheme {
       primary: primaryLight,
       secondary: secondaryLight,
       surface: surfaceLight,
-      background: backgroundLight,
       error: errorLight,
       onPrimary: Colors.white,
       onSecondary: Colors.white,
       onSurface: textPrimaryLight,
-      onBackground: textPrimaryLight,
       onError: Colors.white,
     ),
 
@@ -70,7 +68,7 @@ class AppTheme {
       ),
     ),
 
-    cardTheme: CardTheme(
+    cardTheme: CardThemeData(
       color: cardLight,
       elevation: 4,
       shadowColor: Colors.black.withOpacity(0.2),
@@ -207,12 +205,10 @@ class AppTheme {
       primary: primaryDark,
       secondary: secondaryDark,
       surface: surfaceDark,
-      background: backgroundDark,
       error: errorDark,
       onPrimary: Colors.white,
       onSecondary: Colors.white,
       onSurface: textPrimaryDark,
-      onBackground: textPrimaryDark,
       onError: Colors.white,
     ),
 
@@ -230,7 +226,7 @@ class AppTheme {
       ),
     ),
 
-    cardTheme: CardTheme(
+    cardTheme: CardThemeData(
       color: cardDark,
       elevation: 2,
       shadowColor: Colors.black.withOpacity(0.3),
@@ -328,6 +324,7 @@ class AppTheme {
         fontSize: 14,
         fontWeight: FontWeight.normal,
         color: textPrimaryDark,
+        letterSpacing: 0.2,
       ),
       bodySmall: TextStyle(
         fontSize: 12,
@@ -336,4 +333,4 @@ class AppTheme {
       ),
     ),
   );
-} 
+}

@@ -97,7 +97,7 @@ class CustomBottomNavigation extends StatelessWidget {
               isActive ? activeIcon : icon,
               color: isActive
                   ? Theme.of(context).colorScheme.primary
-                  : Theme.of(context).colorScheme.onBackground.withOpacity(0.6),
+                  : Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
               size: 26,
             ),
             const SizedBox(height: 6),
@@ -108,7 +108,7 @@ class CustomBottomNavigation extends StatelessWidget {
                 fontWeight: isActive ? FontWeight.w600 : FontWeight.w500,
                 color: isActive
                     ? Theme.of(context).colorScheme.primary
-                    : Theme.of(context).colorScheme.onBackground.withOpacity(0.6),
+                    : Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
                 letterSpacing: 0.2,
               ),
             ),

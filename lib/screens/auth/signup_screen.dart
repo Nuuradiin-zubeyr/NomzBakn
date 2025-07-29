@@ -1,6 +1,14 @@
+import 'dart:io';
+import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:go_router/go_router.dart';
+import 'package:provider/provider.dart';
+import '../../providers/auth_provider.dart';
+import 'package:image_picker/image_picker.dart';
+import '../../services/email_service.dart';
+import 'package:http/http.dart' as http;
+import 'dart:convert';
 
 class SignUpScreen extends StatefulWidget {
   const SignUpScreen({super.key});
@@ -15,21 +23,35 @@ class _SignUpScreenState extends State<SignUpScreen> {
   final _passwordController = TextEditingController();
   final _confirmController = TextEditingController();
   final _nameController = TextEditingController();
+  final _phoneController = TextEditingController();
+  File? _profileImage;
   bool _isLoading = false;
   bool _isPasswordVisible = false;
   bool _isConfirmVisible = false;
 
   final passwordRegExp = RegExp(r'^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)[a-zA-Z\d]{8,}$');
 
+  Future<void> _pickProfileImage() async {
+    final picker = ImagePicker();
+    final picked = await picker.pickImage(source: ImageSource.gallery, imageQuality: 70);
+    if (picked != null) {
+      setState(() {
+        _profileImage = File(picked.path);
+      });
+    }
+  }
+
   Future<void> _signUp() async {
     if (!_formKey.currentState!.validate()) return;
-    
     setState(() => _isLoading = true);
-    final prefs = await SharedPreferences.getInstance();
-    
-    // Check if email already exists
-    final existingEmails = prefs.getStringList('registered_emails') ?? [];
-    if (existingEmails.contains(_emailController.text.trim())) {
+    // Backend email check
+    final response = await http.post(
+      Uri.parse('http://10.0.2.2:4000/check-email'),
+      headers: {'Content-Type': 'application/json'},
+      body: jsonEncode({'email': _emailController.text.trim()}),
+    );
+    final data = jsonDecode(response.body);
+    if (data['exists'] == true) {
       setState(() => _isLoading = false);
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -41,27 +63,19 @@ class _SignUpScreenState extends State<SignUpScreen> {
       }
       return;
     }
-
-    // Add email to registered emails list
-    existingEmails.add(_emailController.text.trim());
-    await prefs.setStringList('registered_emails', existingEmails);
-
-    // Save user data
-    await prefs.setString('user_email', _emailController.text.trim());
-    await prefs.setString('user_password', _passwordController.text);
-    await prefs.setString('user_name', _nameController.text.trim());
-    await prefs.setString('profile_name', _nameController.text.trim());
-    await prefs.setString('profile_email', _emailController.text.trim());
-    
+    // Save user data (including phone and profile image as base64 if provided)
+    final authProvider = Provider.of<AppAuthProvider>(context, listen: false);
+    await authProvider.login(
+      _emailController.text.trim(),
+      _passwordController.text,
+      _nameController.text.trim(),
+      phone: _phoneController.text.trim(),
+      profileImage: _profileImage,
+    );
     setState(() => _isLoading = false);
     if (mounted) {
-      context.go('/login');
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Sign up successful! Please sign in.'),
-          backgroundColor: Colors.green,
-        ),
-      );
+      // Si toos ah ugu gudub dashboard ama home screen
+      context.go('/dashboard');
     }
   }
 
@@ -71,6 +85,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
     _passwordController.dispose();
     _confirmController.dispose();
     _nameController.dispose();
+    _phoneController.dispose();
     super.dispose();
   }
 
@@ -86,6 +101,20 @@ class _SignUpScreenState extends State<SignUpScreen> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               const SizedBox(height: 32),
+              Center(
+                child: GestureDetector(
+                  onTap: _pickProfileImage,
+                  child: CircleAvatar(
+                    radius: 44,
+                    backgroundColor: Theme.of(context).colorScheme.primary.withOpacity(0.1),
+                    backgroundImage: _profileImage != null ? FileImage(_profileImage!) : null,
+                    child: _profileImage == null
+                        ? Icon(Icons.camera_alt, size: 36, color: Theme.of(context).colorScheme.primary)
+                        : null,
+                  ),
+                ),
+              ),
+              const SizedBox(height: 16),
               TextFormField(
                 controller: _nameController,
                 decoration: const InputDecoration(
@@ -95,6 +124,24 @@ class _SignUpScreenState extends State<SignUpScreen> {
                 validator: (value) {
                   if (value == null || value.isEmpty) {
                     return 'Please enter your name';
+                  }
+                  return null;
+                },
+              ),
+              const SizedBox(height: 24),
+              TextFormField(
+                controller: _phoneController,
+                keyboardType: TextInputType.phone,
+                decoration: const InputDecoration(
+                  labelText: 'Phone Number',
+                  prefixIcon: Icon(Icons.phone),
+                ),
+                validator: (value) {
+                  if (value == null || value.isEmpty) {
+                    return 'Please enter your phone number';
+                  }
+                  if (value.length < 9) {
+                    return 'Please enter a valid phone number';
                   }
                   return null;
                 },
