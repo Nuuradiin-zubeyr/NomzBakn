@@ -1,25 +1,34 @@
 workflows:
   nomzbank-build:
     name: Build Android and iOS
-    max_build_duration: 45
+    max_build_duration: 60
     environment:
       flutter: stable
       xcode: latest
       cocoapods: default
+      vars:
+        BUNDLE_ID: "com.example.nomzbank"
     scripts:
-      - name: Install Dependencies
+      - name: Get dependencies
         script: |
           flutter pub get
+
       - name: Build Android APK
         script: |
           flutter build apk --release
-      - name: Build iOS App (no code-signing)
+
+      - name: Build iOS (no code signing)
         script: |
           flutter build ios --release --no-codesign
+
     artifacts:
       - build/app/outputs/flutter-apk/app-release.apk
       - build/ios/iphoneos/Runner.app
+
     publishing:
       email:
         recipients:
           - nuurosman77@gmail.com
+        notify:
+          success: true
+          failure: true
